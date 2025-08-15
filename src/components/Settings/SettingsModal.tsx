@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, User as UserIcon, SlidersHorizontal, BarChart3 } from 'lucide-react';
+import { X, User as UserIcon, SlidersHorizontal, BarChart3, Key } from 'lucide-react';
 import { AutoTradeSettings } from '../Dashboard/AutoTradeSettings';
 import { PerformanceAnalytics } from '../Dashboard/PerformanceAnalytics';
+import { ApiKeysTab } from './ApiKeysTab';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -11,11 +12,11 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, userEmail, onSignOut }) => {
-  const [tab, setTab] = useState<'profile' | 'trading' | 'analytics'>('profile');
+  const [tab, setTab] = useState<'profile' | 'trading' | 'analytics' | 'apikeys'>('profile');
 
   if (!isOpen) return null;
 
-  const TabButton: React.FC<{ id: 'profile' | 'trading' | 'analytics'; label: string; icon: React.ReactNode }> = ({ id, label, icon }) => (
+  const TabButton: React.FC<{ id: 'profile' | 'trading' | 'analytics' | 'apikeys'; label: string; icon: React.ReactNode }> = ({ id, label, icon }) => (
     <button
       onClick={() => setTab(id)}
       className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -39,6 +40,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
           <TabButton id="profile" label="Profile" icon={<UserIcon className="h-4 w-4" />} />
           <TabButton id="trading" label="Trading" icon={<SlidersHorizontal className="h-4 w-4" />} />
           <TabButton id="analytics" label="Analytics" icon={<BarChart3 className="h-4 w-4" />} />
+          <TabButton id="apikeys" label="API Keys" icon={<Key className="h-4 w-4" />} />
         </div>
 
         {tab === 'profile' && (
@@ -65,6 +67,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, u
         {tab === 'analytics' && (
           <div className="bg-gray-700 rounded-lg p-4">
             <PerformanceAnalytics />
+          </div>
+        )}
+
+        {tab === 'apikeys' && (
+          <div className="bg-gray-700 rounded-lg p-4">
+            <ApiKeysTab />
           </div>
         )}
       </div>

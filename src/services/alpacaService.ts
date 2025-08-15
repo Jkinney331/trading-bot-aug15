@@ -1,4 +1,5 @@
 import { Account, Order, Position, CryptoData } from '../types/trading';
+import { apiKeysService } from './apiKeysService';
 
 class AlpacaService {
   private apiKey: string;
@@ -11,19 +12,56 @@ class AlpacaService {
     this.secretKey = import.meta.env.VITE_ALPACA_SECRET_KEY || '';
     this.baseUrl = 'https://paper-api.alpaca.markets/v2';
     
+    // Initialize with environment variables, will be updated dynamically
     this.headers = {
       'APCA-API-KEY-ID': this.apiKey,
       'APCA-API-SECRET-KEY': this.secretKey,
+      'Content-Type': 'application/json',
+    };
+
+    this.initializeApiKeys();
+  }
+
+  private async initializeApiKeys() {
+    try {
+      const storedApiKey = await apiKeysService.getApiKeyWithFallback('alpaca', 'api_key');
+      const storedSecretKey = await apiKeysService.getApiKeyWithFallback('alpaca', 'secret_key');
+      
+      if (storedApiKey && storedSecretKey) {
+        this.apiKey = storedApiKey;
+        this.secretKey = storedSecretKey;
+        console.log('✅ Alpaca API keys loaded from stored keys');
+      } else if (this.apiKey && this.secretKey) {
+        console.log('📋 Using Alpaca API keys from environment variables');
+      } else {
+        console.warn('⚠️ No Alpaca API keys found in stored keys or environment');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load Alpaca API keys from stored keys, using environment fallback');
+    }
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    // Always try to get the latest API keys
+    const apiKey = await apiKeysService.getApiKeyWithFallback('alpaca', 'api_key');
+    const secretKey = await apiKeysService.getApiKeyWithFallback('alpaca', 'secret_key');
+    
+    return {
+      'APCA-API-KEY-ID': apiKey || this.apiKey,
+      'APCA-API-SECRET-KEY': secretKey || this.secretKey,
       'Content-Type': 'application/json',
     };
   }
 
   private async makeRequest(endpoint: string, options: RequestInit = {}): Promise<any> {
     try {
+      // Get current headers with latest API keys
+      const headers = await this.getHeaders();
+      
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         ...options,
         headers: {
-          ...this.headers,
+          ...headers,
           ...options.headers,
         },
       });

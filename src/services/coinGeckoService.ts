@@ -1,5 +1,6 @@
 import { Account, Order, Position, CryptoData, FearGreedIndex } from '../types/trading';
 import { supabase } from '../lib/supabase';
+import { apiKeysService } from './apiKeysService';
 
 class CoinGeckoService {
   private baseUrl: string;
@@ -9,29 +10,51 @@ class CoinGeckoService {
   constructor() {
     const isDev = import.meta.env.DEV;
     this.baseUrl = isDev ? '/coingecko/api/v3' : 'https://api.coingecko.com/api/v3';
-    this.apiKey = import.meta.env.VITE_COINGECKO_API_KEY;
-    const usePro = String(import.meta.env.VITE_USE_COINGECKO_PRO || '').toLowerCase() === 'true';
-
+    this.apiKey = import.meta.env.VITE_COINGECKO_API_KEY || '';
+    
+    // Initialize headers without API key for now
     this.headers = {
       accept: 'application/json',
-      ...(usePro && this.apiKey ? { 'x-cg-pro-api-key': this.apiKey } : {}),
     };
 
-    // Log API key status for debugging
-    if (usePro) {
-      if (!this.apiKey) {
-        console.warn('⚠️ VITE_USE_COINGECKO_PRO=true but no VITE_COINGECKO_API_KEY found');
+    // We'll set the API key dynamically in requests
+    this.initializeApiKey();
+  }
+
+  private async initializeApiKey() {
+    try {
+      // Try to get API key from stored keys, fallback to environment
+      const storedKey = await apiKeysService.getApiKeyWithFallback('coingecko', 'api_key');
+      if (storedKey) {
+        this.apiKey = storedKey;
+        console.log('✅ CoinGecko API key loaded from stored keys');
+      } else if (this.apiKey) {
+        console.log('📋 Using CoinGecko API key from environment variables');
       } else {
-        console.log('✅ CoinGecko PRO mode enabled and API key loaded');
+        console.log('ℹ️ CoinGecko running without API key (public endpoints only)');
       }
-    } else {
-      console.log('ℹ️ CoinGecko PRO mode disabled; using public endpoints');
+    } catch (error) {
+      console.warn('⚠️ Failed to load CoinGecko API key from stored keys, using environment fallback');
     }
+  }
+
+  private async getHeaders(): Promise<Record<string, string>> {
+    // Always try to get the latest API key
+    const apiKey = await apiKeysService.getApiKeyWithFallback('coingecko', 'api_key');
+    const usePro = String(import.meta.env.VITE_USE_COINGECKO_PRO || '').toLowerCase() === 'true';
+    
+    return {
+      accept: 'application/json',
+      ...(usePro && apiKey ? { 'x-cg-pro-api-key': apiKey } : {}),
+    };
   }
 
   private async makeRequest(url: string, options: RequestInit = {}): Promise<any> {
     try {
       console.log('🌐 Making CoinGecko API request to:', url);
+      
+      // Get current headers with latest API key
+      const headers = await this.getHeaders();
       
       // Add timeout and better error handling for network issues
       const controller = new AbortController();
@@ -40,7 +63,7 @@ class CoinGeckoService {
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...this.headers,
+          ...headers,
           ...options.headers,
         },
         signal: controller.signal,
@@ -62,7 +85,7 @@ class CoinGeckoService {
           const retryResponse = await fetch(url, {
             ...options,
             headers: {
-              ...this.headers,
+              ...headers,
               ...options.headers,
             },
             signal: retryController.signal,

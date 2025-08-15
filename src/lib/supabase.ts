@@ -13,6 +13,47 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface Database {
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: string;
+          key_name: string;
+          encrypted_value: string;
+          is_active: boolean;
+          last_validated_at: string | null;
+          validation_status: 'pending' | 'valid' | 'invalid' | 'error';
+          validation_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          provider: string;
+          key_name: string;
+          encrypted_value: string;
+          is_active?: boolean;
+          last_validated_at?: string | null;
+          validation_status?: 'pending' | 'valid' | 'invalid' | 'error';
+          validation_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          provider?: string;
+          key_name?: string;
+          encrypted_value?: string;
+          is_active?: boolean;
+          last_validated_at?: string | null;
+          validation_status?: 'pending' | 'valid' | 'invalid' | 'error';
+          validation_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       portfolios: {
         Row: {
           id: string;

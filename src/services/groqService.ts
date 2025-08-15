@@ -1,4 +1,5 @@
 import { CryptoData } from '../types/trading';
+import { apiKeysService } from './apiKeysService';
 
 interface MarketInsight {
   id: string;
@@ -28,11 +29,31 @@ class GroqService {
   constructor() {
     this.apiKey = import.meta.env.VITE_GROQ_API_KEY || '';
     this.baseUrl = 'https://api.groq.com/openai/v1';
+    this.initializeApiKey();
+  }
+
+  private async initializeApiKey() {
+    try {
+      const storedKey = await apiKeysService.getApiKeyWithFallback('groq', 'api_key');
+      if (storedKey) {
+        this.apiKey = storedKey;
+        console.log('✅ Groq API key loaded from stored keys');
+      } else if (this.apiKey) {
+        console.log('📋 Using Groq API key from environment variables');
+      } else {
+        console.warn('⚠️ No Groq API key found in stored keys or environment');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load Groq API key from stored keys, using environment fallback');
+    }
   }
 
   private async makeRequest(messages: Array<{ role: string; content: string }>): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('Groq API key not configured. Please set VITE_GROQ_API_KEY in your environment variables.');
+    // Try to get the latest API key
+    const apiKey = await apiKeysService.getApiKeyWithFallback('groq', 'api_key');
+    
+    if (!apiKey) {
+      throw new Error('Groq API key not configured. Please add it in Settings > API Keys or set VITE_GROQ_API_KEY in your environment variables.');
     }
 
     // Rate limiting: ensure minimum time between requests
@@ -47,7 +68,7 @@ class GroqService {
       const response = await fetch(`${this.baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
